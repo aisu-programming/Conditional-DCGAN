@@ -55,7 +55,8 @@ def plot_lr_schedule(ckpt_dir, lr_schedule):
     plt.title('Learning Rate Schedule', fontsize=20)
     plt.xlabel("Step")
     plt.ylabel("Learning Rate")
-    plt.plot(lr_schedule(np.arange(60000, dtype=np.float32)))
+    plt.plot(lr_schedule(np.arange(500000, dtype=np.float32)))
+    plt.tight_layout()
     plt.savefig(f"{ckpt_dir}/lr_schedule.png", dpi=200)
     plt.close('all')
     return
@@ -68,20 +69,20 @@ def plot_history(ckpt_dir, history):
     lr       = history['lr']
     epochs_length = range(1, 1+len(gen_loss))
 
-    plt.figure(1, figsize=(12, 8), clear=True)
+    plt.figure(1, figsize=(10, 12), clear=True)
     plt.suptitle('Losses & Learning Rate History', fontsize=20)
     plt.xlabel('Epochs')
 
-    plt.subplot(1, 2, 1)
+    plt.subplot(2, 1, 1)
     plt.title('Losses')
     plt.plot(epochs_length, gen_loss, 'b-', label='Generator')
     plt.plot(epochs_length, dis_loss, 'r-', label='Discriminator')
     plt.legend()
-    
-    plt.subplot(1, 2, 2)
+
+    plt.subplot(2, 1, 2)
     plt.title('Learning Rate')
     plt.plot(epochs_length, lr, 'r-')
-    plt.legend()
+    plt.tight_layout()
 
     plt.savefig(f"{ckpt_dir}/history.png", dpi=200)
     plt.close('all')

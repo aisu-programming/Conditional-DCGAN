@@ -26,7 +26,8 @@ class MyDiscriminator(tf.keras.layers.Layer):
             tf.keras.layers.LeakyReLU(alpha=0.2) for _ in range(layer_num) ]
         self.Flatten    = tf.keras.layers.Flatten()
         self.Dropout    = tf.keras.layers.Dropout(dropout)
-        self.CtgEmbed   = tf.keras.layers.Embedding(10, 32768)
+        self.Dense      = tf.keras.layers.Dense(100)
+        self.CtgEmbed   = tf.keras.layers.Embedding(10, 100)
         self.RealOrFake = tf.keras.layers.Dense(1, activation=tf.keras.activations.sigmoid)
 
     def call(self, x, catergory=None, training=False):
@@ -37,9 +38,13 @@ class MyDiscriminator(tf.keras.layers.Layer):
             assert x.shape[1:] == [
                 int(16*(0.5**(i//2))), int(16*(0.5**(i//2))), 64*(2**i) ]
         x = self.Flatten(x)
-        assert x.shape[1:] == [ 32768 ]
+        x = self.Dropout(x, training=training)
+        # assert x.shape[1:] == [ 32768 ]
+        assert x.shape[1:] == [ 16384 ]
+        x = self.Dense(x)
+        assert x.shape[1:] == [ 100 ]
         if catergory is not None:
             x += tf.squeeze(self.CtgEmbed(catergory))
-        x = self.Dropout(x, training=training)
+        assert x.shape[1:] == [ 100 ]
         x = self.RealOrFake(x)
         return x

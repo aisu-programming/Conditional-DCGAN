@@ -11,13 +11,14 @@ def generator_loss(f_predict):
 
 class MyGenerator(tf.keras.layers.Layer):
 
-    def __init__(self, layer_num):
+    def __init__(self, noise_dim, layer_num):
         super(MyGenerator, self).__init__()
 
+        self.noise_dim = noise_dim
         self.layer_num = layer_num
 
-        self.CtgEmbed = tf.keras.layers.Embedding(10, 1024)
-        self.Dense    = tf.keras.layers.Dense(4 * 4 * 512*(2**(self.layer_num-3)), use_bias=False)
+        self.CtgEmbed = tf.keras.layers.Embedding(10, noise_dim)
+        self.Dense    = tf.keras.layers.Dense(4 * 4 * 512*(2**(self.layer_num-3)), use_bias=False, input_shape=(noise_dim, ))
         self.Reshape  = tf.keras.layers.Reshape((4, 4, 512*(2**(self.layer_num-3))))
 
         self.BatchNorms = [
@@ -76,12 +77,12 @@ class MyGenerator(tf.keras.layers.Layer):
 
     def call(self, noise, catergory=None):
 
-        assert noise.shape[1:] == [ 1024 ]
+        assert noise.shape[1:] == [ self.noise_dim ]
         if catergory is None:
             x = noise
         else:
             catergory = tf.squeeze(self.CtgEmbed(catergory))
-            assert catergory.shape[1:] == [ 1024 ]
+            assert catergory.shape[1:] == [ self.noise_dim ]
             x = noise + catergory
 
         x = self.Dense(x)

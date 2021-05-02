@@ -13,22 +13,22 @@ from discriminator import discriminator_loss, MyDiscriminator
 
 ''' Parameters '''
 CKPT_DIR = make_ckpt_dir()
-# RESTORE_CKPT_PATH = r"ckpt/2021.04.28_11.34/latest_ckpt/ckpt-18"
-# LOAD_PARAMETERS_PATH = r"ckpt/2021.04.28_11.34/parameters.txt"
-# START_EPOCH = 181
-RESTORE_CKPT_PATH = None
-LOAD_PARAMETERS_PATH = None
-START_EPOCH = 0
+RESTORE_CKPT_PATH = r"ckpt/2021.05.02_10.52/latest_ckpt/ckpt-18"
+LOAD_PARAMETERS_PATH = r"ckpt/2021.05.02_10.52/parameters.txt"
+START_EPOCH = 181
+# RESTORE_CKPT_PATH = None
+# LOAD_PARAMETERS_PATH = None
+# START_EPOCH = 0
 CATERGORY = 'all'
 BATCH_SIZE = 16
-NOISE_DIM = 1024
-G_LAYER_NUM = 4
-D_LAYER_NUM = 6
+NOISE_DIM = 100
+G_LAYER_NUM = 3
+D_LAYER_NUM = 3
 DROPOUT = 0.4
 EPOCH = 400
-INITIAL_LR = 2.6e-4
-WARMUP_STEPS = 7500
-DECAY_STEPS = 500
+INITIAL_LR = 5e-4
+WARMUP_STEPS = 90000
+DECAY_STEPS = 30000
 DECAY_RATE = 0.99
 G_D_LIMIT = None
 G_D_RATIO = None
@@ -52,26 +52,29 @@ def save_parameters():
         f.write(f"DECAY_STEPS         : {DECAY_STEPS}\n")
         f.write(f"DECAY_RATE          : {DECAY_RATE}\n")
         f.write(f"G_D_LIMIT           : {G_D_LIMIT}\n")
-        f.write(f"G_D_RATIO           : {G_D_RATIO}\n")
+        f.write(f"G_D_RATIO           : {G_D_RATIO}")
         return
 
 
 def load_parameters():
-    raise NotImplementedError
+    # raise NotImplementedError
     with open(f"{LOAD_PARAMETERS_PATH}", mode='r') as f:
 
         f.readline()
         f.readline()
         f.readline()
         
-        CATERGORY   = str(f.readline().split(':')[1].strip())
-        BATCH_SIZE  = int(f.readline().split(':')[1].strip())
-        NOISE_DIM   = int(f.readline().split(':')[1].strip())
-        DROPOUT     = float(f.readline().split(':')[1].strip())
-        EPOCH       = int(f.readline().split(':')[1].strip())
-        INITIAL_LR  = float(f.readline().split(':')[1].strip())
-        DECAY_STEPS = int(f.readline().split(':')[1].strip())
-        DECAY_RATE  = float(f.readline().split(':')[1].strip())
+        CATERGORY    = str(f.readline().split(':')[1].strip())
+        BATCH_SIZE   = int(f.readline().split(':')[1].strip())
+        NOISE_DIM    = int(f.readline().split(':')[1].strip())
+        G_LAYER_NUM  = int(f.readline().split(':')[1].strip())
+        D_LAYER_NUM  = int(f.readline().split(':')[1].strip())
+        DROPOUT      = float(f.readline().split(':')[1].strip())
+        EPOCH        = int(f.readline().split(':')[1].strip())
+        INITIAL_LR   = float(f.readline().split(':')[1].strip())
+        WARMUP_STEPS = int(f.readline().split(':')[1].strip())
+        DECAY_STEPS  = int(f.readline().split(':')[1].strip())
+        DECAY_RATE   = float(f.readline().split(':')[1].strip())
 
         G_D_LIMIT   = str(f.readline().split(':')[1].strip())
         if G_D_LIMIT == 'None': G_D_LIMIT = None
@@ -131,10 +134,10 @@ def train_discriminator(r_img, r_ctg, f_noise, f_ctg):
 def train_step(epoch, batch_idx, r_img, r_ctg, f_noise, f_ctg):
 
     general_rule = G_D_RATIO is None or train_gen_loss.result() < 1e-5 or train_dis_loss.result() < 1e-5
-    gen_rule = G_D_LIMIT is None or not ((epoch+1) % G_D_LIMIT == 0 and train_dis_loss.result() / train_gen_loss.result() > G_D_RATIO)
-    # gen_rule = batch_idx < 50 or True
-    dis_rule = G_D_LIMIT is None or not ((epoch+1) % G_D_LIMIT == 0 and train_gen_loss.result() / train_dis_loss.result() > G_D_RATIO)
-    # dis_rule = batch_idx < 50 or (batch_idx % 8) == 0
+    # gen_rule = G_D_LIMIT is None or not ((epoch+1) % G_D_LIMIT == 0 and train_dis_loss.result() / train_gen_loss.result() > G_D_RATIO)
+    # dis_rule = G_D_LIMIT is None or not ((epoch+1) % G_D_LIMIT == 0 and train_gen_loss.result() / train_dis_loss.result() > G_D_RATIO)
+    gen_rule = batch_idx < 50 or True
+    dis_rule = batch_idx < 50 or (batch_idx % 9) == 0
 
     if general_rule or gen_rule: train_generator(f_noise, f_ctg)
     if general_rule or dis_rule: train_discriminator(r_img, r_ctg, f_noise, f_ctg)
@@ -145,7 +148,7 @@ def train_step(epoch, batch_idx, r_img, r_ctg, f_noise, f_ctg):
 def main():
 
     global generator, discriminator
-    generator = MyGenerator(G_LAYER_NUM)
+    generator = MyGenerator(NOISE_DIM, G_LAYER_NUM)
     discriminator = MyDiscriminator(D_LAYER_NUM, DROPOUT)
 
     global optimizer
@@ -174,8 +177,8 @@ def main():
 
     if CATERGORY == 'all': real_images, real_catergories, _, _ = load_data()
     else: real_images, real_catergories, _, _ = load_data(catergory2id[CATERGORY])
-    # plot_images(real_images[:20], real_catergories[:20], CKPT_DIR,
-    #             filename="demo", title="Train Images Demonstration")
+    plot_images(real_images[:20], real_catergories[:20], CKPT_DIR,
+                filename="demo", title="Train Images Demonstration")
 
     global train_gen_loss, train_dis_loss, valid_gen_loss, valid_dis_loss
     train_gen_loss = tf.keras.metrics.Mean()
@@ -189,8 +192,10 @@ def main():
     valid_noise = np.random.normal(size=(20, NOISE_DIM))
     if CATERGORY == 'all':
         valid_ctg = np.array([
-            0, 0, 1, 1, 2, 2, 3, 3, 4, 4,
-            5, 5, 6, 6, 7, 7, 8, 8, 9, 9,
+            0, 1, 2, 3, 4,
+            0, 1, 2, 3, 4,
+            5, 6, 7, 8, 9,
+            5, 6, 7, 8, 9,
         ])
     else:
         valid_ctg = np.array([[catergory2id[CATERGORY]]] * 20)
@@ -199,11 +204,14 @@ def main():
 
         r_imgs, r_ctgs = unison_shuffled_copies(real_images, real_catergories)
 
-        r_imgs = r_imgs[:8000]
-        r_ctgs = r_ctgs[:8000]
+        r_imgs = r_imgs[:43200]
+        r_ctgs = r_ctgs[:43200]
 
         train_gen_loss.reset_states()
         train_dis_loss.reset_states()
+
+        avg_gen_loss = []
+        avg_dis_loss = []
 
         progress_bar = tqdm(tf.range(math.ceil(len(r_imgs)/BATCH_SIZE)),
                             total=math.ceil(len(r_imgs)/BATCH_SIZE),
@@ -221,14 +229,17 @@ def main():
 
             train_step(epoch, int(i), r_img_batch, r_ctg_batch, f_noise, f_ctg)
 
+            avg_gen_loss.append(train_gen_loss.result())
+            avg_dis_loss.append(train_dis_loss.result())
+
             progress_bar.set_description(
                 f"Epoch {epoch+1:3d}/{EPOCH:3d} | " + 
-                f"train_gen_loss: {train_gen_loss.result():10.7f}, " + 
-                f"train_dis_loss: {train_dis_loss.result():10.7f} | " + 
+                f"train_gen_loss: {np.average(avg_gen_loss):10.7f}, " + 
+                f"train_dis_loss: {np.average(avg_dis_loss):10.7f} | " + 
                 f"learning_rate: {optimizer._decayed_lr('float32').numpy():.15f}")
 
-        gen_losses_history.append(train_gen_loss.result())
-        dis_losses_history.append(train_dis_loss.result())
+        gen_losses_history.append(np.average(avg_gen_loss))
+        dis_losses_history.append(np.average(avg_dis_loss))
         lr_history.append(optimizer._decayed_lr('float32').numpy())
 
         plot_history(CKPT_DIR, {

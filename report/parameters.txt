@@ -1,0 +1,16 @@
+RESTORE_CKPT_PATH   : None
+LOAD_PARAMETERS_PATH: None
+START_EPOCH         : 0
+CATERGORY           : all
+BATCH_SIZE          : 16
+NOISE_DIM           : 1024
+G_LAYER_NUM         : 5
+D_LAYER_NUM         : 6
+DROPOUT             : 0.4
+EPOCH               : 400
+INITIAL_LR          : 0.0002
+WARMUP_STEPS        : 15000
+DECAY_STEPS         : 1500
+DECAY_RATE          : 0.99
+G_D_LIMIT           : None
+G_D_RATIO           : None
